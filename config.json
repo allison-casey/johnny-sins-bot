@@ -1,0 +1,13 @@
+{
+  "title": "Johnny Sins",
+  "description": "This is sarn baby",
+  "triggers" : [
+    {
+      "keywords": ["johnny", "sins"],
+      "responses" : [
+        ":poop: Hello there, you seem to have caught me with my pants down :poop:",
+        ":poop: I'll see you tonight Reno :wink:"
+      ]
+    }
+  ]
+}
