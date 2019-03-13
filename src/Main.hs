@@ -88,7 +88,7 @@ isKeyword triggers message = any checkTriggerKeywords triggers
   checkTriggerKeywords trigger =
     any (`caseInsensitiveIsInfix` message) (keywords trigger)
 
--- generateResponse :: BotTrigger -> T.Text -> T.Text
-generateResponse trigger message = fmap (responsesList !!)
-  $ randomRIO (0, length responsesList - 1)
+generateResponse :: BotTrigger -> T.Text -> IO T.Text
+generateResponse trigger message = (responsesList !!)
+  <$> randomRIO (0, length responsesList - 1)
   where responsesList = responses trigger
