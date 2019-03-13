@@ -17,6 +17,11 @@ executable johnny-sins-bot
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
+  extensions:          OverloadedStrings
+                     , DeriveGeneric
   build-depends:       base >= 4.7 && < 5
                      , discord-haskell
                      , text
+                     , aeson
+                     , bytestring
+                     , random
