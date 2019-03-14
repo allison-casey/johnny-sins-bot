@@ -1,20 +1,25 @@
 {-# LANGUAGE DeriveGeneric, DeriveAnyClass, DuplicateRecordFields  #-}
 module Main where
 
-import           Control.Exception              ( finally )
-import           Control.Monad
-import           Data.Char                      ( toLower )
-import           Data.Monoid                    ( (<>) )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import qualified Discord                       as DSC
 import qualified Data.ByteString.Char8         as BC
 import qualified Data.ByteString.Lazy          as B
-import           Data.Either
-import           GHC.Generics
-import           Data.Aeson
-import           Data.List
-import           Data.Maybe
+
+import           Control.Exception              ( finally )
+import           Control.Monad                  ( unless
+                                                , when
+                                                )
+import           Data.Char                      ( toLower )
+import           Data.Monoid                    ( (<>) )
+import           GHC.Generics                   ( Generic )
+import           Data.Aeson                     ( ToJSON
+                                                , FromJSON
+                                                , decode
+                                                )
+import           Data.List                      ( find )
+import           Data.Maybe                     ( Maybe )
 import           System.Random                  ( randomRIO
                                                 , randomIO
                                                 )
