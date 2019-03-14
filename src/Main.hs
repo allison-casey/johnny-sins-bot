@@ -1,8 +1,7 @@
-{-# LANGUAGE DeriveGeneric, DeriveAnyClass  #-}
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass, DuplicateRecordFields  #-}
 module Main where
 
 import           Control.Exception              ( finally )
-import           Control.Monad                  ( when )
 import           Control.Monad
 import           Data.Char                      ( toLower )
 import           Data.Monoid                    ( (<>) )
@@ -16,19 +15,20 @@ import           GHC.Generics
 import           Data.Aeson
 import           Data.List
 import           Data.Maybe
-import           System.Random                  ( randomRIO )
+import           System.Random                  ( randomRIO
+                                                , randomIO
+                                                )
 
 data BotTrigger = BotTrigger
   { keywords :: [T.Text]
+  , probability :: Double
   , responses :: [T.Text] } deriving (Show, Generic, ToJSON, FromJSON)
 
 data BotConfig = BotConfig
   { title :: T.Text
   , description :: T.Text
+  , probability :: Double
   , triggers :: [BotTrigger] } deriving (Show, Generic, ToJSON, FromJSON)
-
--- parseConfig :: BC.ByteString -> BotConfig
--- parseConfig  = A.encode
 
 main :: IO ()
 main = do
@@ -41,9 +41,6 @@ main = do
       discord <- DSC.loginRestGateway (DSC.Auth token)
       finally (loopingMain conf discord) (DSC.stopDiscord discord)
 
-testKeywords :: [T.Text]
-testKeywords = ["johnny", "sins"]
-
 loopingMain :: BotConfig -> (DSC.RestChan, DSC.Gateway, z) -> IO ()
 loopingMain conf dis = do
   e <- DSC.nextEvent dis
@@ -51,14 +48,23 @@ loopingMain conf dis = do
     Left  er                    -> putStrLn ("Event error: " <> show er)
     Right (DSC.MessageCreate m) -> do
       unless (fromBot m) $ do
-        let message            = DSC.messageText m
-        let channelID          = DSC.messageChannel m
+        let message                   = DSC.messageText m
+        let channelID                 = DSC.messageChannel m
         let responsibleTrigger = getResponsibleTrigger triggersList message
+        let masterResponseProbability = probability (conf :: BotConfig)
         case responsibleTrigger of
           Nothing      -> return ()
           Just trigger -> do
-            response <- generateResponse trigger message
-            sendChannelMessage channelID response
+            let triggerResponseProbability =
+                  probability (trigger :: BotTrigger)
+            shouldBotRespond <- shouldRespond
+              (masterResponseProbability * triggerResponseProbability)
+            print $ masterResponseProbability * triggerResponseProbability
+            print shouldBotRespond
+            when shouldBotRespond $ do
+              response <- generateResponse trigger message
+              sendChannelMessage channelID response
+
       loopingMain conf dis
     _ -> loopingMain conf dis
  where
@@ -92,3 +98,8 @@ generateResponse :: BotTrigger -> T.Text -> IO T.Text
 generateResponse trigger message = (responsesList !!)
   <$> randomRIO (0, length responsesList - 1)
   where responsesList = responses trigger
+
+shouldRespond :: Double -> IO Bool
+shouldRespond prob = do
+  chance <- randomIO :: IO Double
+  return $ chance <= prob

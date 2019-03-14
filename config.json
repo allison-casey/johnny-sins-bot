@@ -1,9 +1,11 @@
 {
   "title": "Johnny Sins",
   "description": "This is sarn baby",
+  "probability": 0.75,
   "triggers" : [
     {
       "keywords": ["johnny", "sins"],
+      "probability": 0.25,
       "responses" : [
         ":poop: Hello there, you seem to have caught me with my pants down :poop:",
         ":poop: I'll see you tonight Reno :wink:"
