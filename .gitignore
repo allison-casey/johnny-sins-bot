@@ -1,3 +1,4 @@
+*.secret
 dist
 dist-*
 cabal-dev
