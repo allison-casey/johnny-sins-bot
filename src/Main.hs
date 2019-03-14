@@ -67,7 +67,7 @@ loopingMain conf dis = do
             print $ masterResponseProbability * triggerResponseProbability
             print shouldBotRespond
             when shouldBotRespond $ do
-              response <- generateResponse trigger message
+              response <- generateResponse trigger
               sendChannelMessage channelID response
 
       loopingMain conf dis
@@ -99,8 +99,8 @@ isKeyword triggers message = any checkTriggerKeywords triggers
   checkTriggerKeywords trigger =
     any (`caseInsensitiveIsInfix` message) (keywords trigger)
 
-generateResponse :: BotTrigger -> T.Text -> IO T.Text
-generateResponse trigger message = (responsesList !!)
+generateResponse :: BotTrigger -> IO T.Text
+generateResponse trigger = (responsesList !!)
   <$> randomRIO (0, length responsesList - 1)
   where responsesList = responses trigger
 
