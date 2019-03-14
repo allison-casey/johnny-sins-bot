@@ -1,14 +1,17 @@
 {
   "title": "Johnny Sins",
   "description": "This is sarn baby",
-  "probability": 0.75,
+  "probability": 1,
   "triggers" : [
     {
       "keywords": ["johnny", "sins"],
       "probability": 0.25,
       "responses" : [
-        ":poop: Hello there, you seem to have caught me with my pants down :poop:",
-        ":poop: I'll see you tonight Reno :wink:"
+        "Hello there, you seem to have caught me with my pants down",
+        ":wink: I'll see you tonight Reno :wink:",
+        "The name is Mayor Sins! Johnathan Sins at your service",
+        "You guys are stars! :wink:",
+        "You ever want to do some business, come talk to me. Dont worry about it :wink:"
       ]
     }
   ]
