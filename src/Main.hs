@@ -11,11 +11,6 @@ import           Control.Exception              ( finally )
 import           Control.Monad                  ( unless
                                                 , when
                                                 )
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Class
-import           Control.Monad.IO.Class
-import           Control.Monad
-import           Control.Error
 import           Data.Char                      ( toLower )
 import           Data.Monoid                    ( (<>) )
 import           GHC.Generics                   ( Generic )
@@ -54,26 +49,23 @@ bootstrapBot conf = do
 
 -- | Kicks of the primary event loop for the bot, initializing all necessary
 -- connections and authentication tokens.
--- main :: IO (Maybe ())
+main :: IO ()
 main = do
   config <- readConfig
   case config of
     Nothing   -> putStrLn "[ERROR] Failed to parse config"
     Just conf -> bootstrapBot conf
 
-processMessage conf disc message
-  | isBot = return ()
-  | not isBot = case responsibleTrigger of
-    Nothing      -> return ()
-    Just trigger -> do
-      let masterProb  = probability (conf :: BotConfig)
-      let triggerProb = probability (trigger :: BotTrigger)
-      shouldBotRespond <- shouldRespond $ masterProb * triggerProb
-      when shouldBotRespond $ do
-        response <- generateResponse trigger
-        sendChannelMessage channelID response
+processMessage conf disc message = case responsibleTrigger of
+  Nothing      -> return ()
+  Just trigger -> do
+    let masterProb  = probability (conf :: BotConfig)
+    let triggerProb = probability (trigger :: BotTrigger)
+    shouldBotRespond <- shouldRespond $ masterProb * triggerProb
+    when shouldBotRespond $ do
+      response <- generateResponse trigger
+      sendChannelMessage channelID response
  where
-  isBot              = fromBot message
   messageText        = DSC.messageText message
   channelID          = DSC.messageChannel message
   responsibleTrigger = getResponsibleTrigger (triggers conf) messageText
@@ -82,14 +74,14 @@ processMessage conf disc message
     return ()
 -- | Primary event loop for bot actions. Will recieve all messages in a server
 -- and respond with a quote from your boi Johnny Sins
--- loopingMain :: BotConfig -> (DSC.RestChan, DSC.Gateway, z) -> IO ()
 loopingMain :: BotConfig -> (DSC.RestChan, DSC.Gateway, z) -> IO ()
 loopingMain conf disc = do
   e <- DSC.nextEvent disc
   case e of
-    Left er -> putStrLn ("Event error: " <> show er)
-    Right (DSC.MessageCreate m) ->
-      processMessage conf disc m >> loopingMain conf disc
+    Left  er                    -> putStrLn ("Event error: " <> show er)
+    Right (DSC.MessageCreate m) -> finally
+      (unless (fromBot m) $ processMessage conf disc m)
+      (loopingMain conf disc)
     _ -> loopingMain conf disc
 
 -- | Checks if a message is from a bot
