@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, DeriveAnyClass, DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass, DuplicateRecordFields, OverloadedStrings  #-}
 module Main where
 
 import qualified Data.Text                     as T
@@ -11,6 +11,11 @@ import           Control.Exception              ( finally )
 import           Control.Monad                  ( unless
                                                 , when
                                                 )
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Class
+import           Control.Monad.IO.Class
+import           Control.Monad
+import           Control.Error
 import           Data.Char                      ( toLower )
 import           Data.Monoid                    ( (<>) )
 import           GHC.Generics                   ( Generic )
@@ -35,52 +40,57 @@ data BotConfig = BotConfig
   , probability :: Double
   , triggers :: [BotTrigger] } deriving (Show, Generic, ToJSON, FromJSON)
 
--- | Kicks of the primary event loop for the bot, initializing all necessary
--- connections and authentication tokens.
-main :: IO ()
-main = do
+readConfig :: IO (Maybe BotConfig)
+readConfig = do
   rawJSON <- B.readFile "./config.json"
   let config = decode rawJSON :: Maybe BotConfig
+  return config
+
+bootstrapBot :: BotConfig -> IO ()
+bootstrapBot conf = do
+  token   <- T.strip <$> TIO.readFile "./auth-token.secret"
+  discord <- DSC.loginRestGateway (DSC.Auth token)
+  finally (loopingMain conf discord) (DSC.stopDiscord discord)
+
+-- | Kicks of the primary event loop for the bot, initializing all necessary
+-- connections and authentication tokens.
+-- main :: IO (Maybe ())
+main = do
+  config <- readConfig
   case config of
     Nothing   -> putStrLn "[ERROR] Failed to parse config"
-    Just conf -> do
-      token   <- T.strip <$> TIO.readFile "./auth-token.secret"
-      discord <- DSC.loginRestGateway (DSC.Auth token)
-      finally (loopingMain conf discord) (DSC.stopDiscord discord)
+    Just conf -> bootstrapBot conf
 
+processMessage conf disc message
+  | isBot = return ()
+  | not isBot = case responsibleTrigger of
+    Nothing      -> return ()
+    Just trigger -> do
+      let masterProb  = probability (conf :: BotConfig)
+      let triggerProb = probability (trigger :: BotTrigger)
+      shouldBotRespond <- shouldRespond $ masterProb * triggerProb
+      when shouldBotRespond $ do
+        response <- generateResponse trigger
+        sendChannelMessage channelID response
+ where
+  isBot              = fromBot message
+  messageText        = DSC.messageText message
+  channelID          = DSC.messageChannel message
+  responsibleTrigger = getResponsibleTrigger (triggers conf) messageText
+  sendChannelMessage channelID message = do
+    _ <- DSC.restCall disc (DSC.CreateMessage channelID message)
+    return ()
 -- | Primary event loop for bot actions. Will recieve all messages in a server
 -- and respond with a quote from your boi Johnny Sins
+-- loopingMain :: BotConfig -> (DSC.RestChan, DSC.Gateway, z) -> IO ()
 loopingMain :: BotConfig -> (DSC.RestChan, DSC.Gateway, z) -> IO ()
-loopingMain conf dis = do
-  e <- DSC.nextEvent dis
+loopingMain conf disc = do
+  e <- DSC.nextEvent disc
   case e of
-    Left  er                    -> putStrLn ("Event error: " <> show er)
-    Right (DSC.MessageCreate m) -> do
-      unless (fromBot m) $ do
-        let message                   = DSC.messageText m
-        let channelID                 = DSC.messageChannel m
-        let responsibleTrigger = getResponsibleTrigger triggersList message
-        let masterResponseProbability = probability (conf :: BotConfig)
-        case responsibleTrigger of
-          Nothing      -> return ()
-          Just trigger -> do
-            let triggerResponseProbability =
-                  probability (trigger :: BotTrigger)
-            shouldBotRespond <- shouldRespond
-              (masterResponseProbability * triggerResponseProbability)
-            print $ masterResponseProbability * triggerResponseProbability
-            print shouldBotRespond
-            when shouldBotRespond $ do
-              response <- generateResponse trigger
-              sendChannelMessage channelID response
-
-      loopingMain conf dis
-    _ -> loopingMain conf dis
- where
-  triggersList = triggers conf
-  sendChannelMessage channelID message = do
-    _ <- DSC.restCall dis (DSC.CreateMessage channelID message)
-    return ()
+    Left er -> putStrLn ("Event error: " <> show er)
+    Right (DSC.MessageCreate m) ->
+      processMessage conf disc m >> loopingMain conf disc
+    _ -> loopingMain conf disc
 
 -- | Checks if a message is from a bot
 fromBot :: DSC.Message -> Bool
