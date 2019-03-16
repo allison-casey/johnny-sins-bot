@@ -6,4 +6,8 @@ everyone's favorite mayor/doctor.
 * Multiple trigger sets
 * Probability based responses
 
+## Future Capabilities
+* Fuzzy pattern matching
+* Debug flags
+
 ![Ur Boi](./johnnysins.png)
