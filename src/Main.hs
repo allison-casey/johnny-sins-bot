@@ -35,6 +35,9 @@ data BotConfig = BotConfig
   , probability :: Double
   , triggers :: [BotTrigger] } deriving (Show, Generic, ToJSON, FromJSON)
 
+debug :: Bool
+debug = False
+
 readConfig :: IO (Maybe BotConfig)
 readConfig = do
   rawJSON <- B.readFile "./config.json"
@@ -63,7 +66,9 @@ processMessage conf disc message = case responsibleTrigger of
     let triggerProb = probability (trigger :: BotTrigger)
     shouldBotRespond <- shouldRespond $ masterProb * triggerProb
     when shouldBotRespond $ do
-      response <- generateResponse trigger
+      response <- if debug
+        then generateDebugResponse trigger (masterProb * triggerProb)
+        else generateResponse trigger
       sendChannelMessage channelID response
  where
   messageText        = DSC.messageText message
@@ -115,6 +120,25 @@ generateResponse :: BotTrigger -> IO T.Text
 generateResponse trigger = (responsesList !!)
   <$> randomRIO (0, length responsesList - 1)
   where responsesList = responses trigger
+
+generateDebugResponse :: BotTrigger -> Double -> IO T.Text
+generateDebugResponse trigger responseProb = do
+  response <- generateResponse trigger
+  return $ T.intercalate
+    "\n"
+    [ response
+    , "```CSS\n"
+    , matchedOn
+    , responseProbability
+    , possibleResponses
+    , "```"
+    ]
+ where
+  matchedOn = "Matched On: " <> T.intercalate ", " (keywords trigger)
+  responseProbability =
+    "Response Probability: " <> (T.pack . show) responseProb
+  possibleResponses =
+    "Possible Responses: \n\t\t" <> T.intercalate "\n\t\t" (responses trigger)
 
 -- | Based on a given probability. randomly determine if the bot
 -- should respond
