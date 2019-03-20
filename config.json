@@ -4,6 +4,13 @@
   "probability": 1,
   "triggers" : [
     {
+      "keywords": [":sins:"],
+      "probability": 1,
+      "responses": [
+        ":sins:"
+      ]
+    },
+    {
       "keywords": ["johnny", "sins"],
       "probability": 1,
       "responses" : [
