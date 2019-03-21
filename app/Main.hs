@@ -14,22 +14,29 @@ import           Control.Exception              ( finally )
 import           Control.Monad                  ( unless
                                                 , when
                                                 )
-
+import System.Environment
+import System.Exit
 -- | Kicks of the primary event loop for the bot, initializing all necessary
 -- connections and authentication tokens.
 main :: IO ()
-main = runBot
+main = do
+  args <- getArgs
+  case args of
+    [configPath, tokenPath] -> runBot configPath tokenPath
+    _ -> putStrLn "[ERROR]: Invalid arguments -> johnny-sins-bot CONFIG_PATH TOKEN_PATH"
+  -- runBot
 
-runBot :: IO ()
-runBot = do
-  config <- readConfig "./config.json"
+
+runBot :: String -> String -> IO ()
+runBot configPath tokenPath = do
+  config <- readConfig configPath
+  token   <- T.strip <$> TIO.readFile tokenPath
   case config of
     Nothing   -> putStrLn "[ERROR] Failed to parse config"
-    Just conf -> bootstrapBot conf
+    Just conf -> bootstrapBot conf token
 
-bootstrapBot :: BotConfig -> IO ()
-bootstrapBot conf = do
-  token   <- T.strip <$> TIO.readFile "./auth-token.secret"
+bootstrapBot :: BotConfig -> T.Text -> IO ()
+bootstrapBot conf token = do
   discord <- DSC.loginRestGateway (DSC.Auth token)
   finally (loopingMain conf discord) (DSC.stopDiscord discord)
 

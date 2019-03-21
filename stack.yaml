@@ -61,5 +61,15 @@ extra-deps:
 # extra-include-dirs: [/path/to/dir]
 # extra-lib-dirs: [/path/to/dir]
 #
-# Allow a newer minor version of GHC than the snapshot specifies
+# Allow a newer minor version of GHCthan the snapshot specifies
 # compiler-check: newer-minor
+image:
+  container:
+    name: sjcasey/johnny-sins-bot
+    base: alpine:latest
+docker:
+  enable: true
+  image: steve/alpine-ghc
+  stack-exe: download
+ghc-options:
+  $everything: -Wall -O2 -static -threaded

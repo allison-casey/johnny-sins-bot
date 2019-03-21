@@ -39,3 +39,4 @@ executable johnny-sins-bot
                      , aeson
                      , bytestring
                      , random
+                     , directory

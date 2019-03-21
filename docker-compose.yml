@@ -1,0 +1,8 @@
+version: '3'
+services:
+  sinsbot:
+    image: "steve/johnny-sins-bot"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./auth-token.secret:/app/auth-token.secret
+    command: johnny-sins-bot /app/config.json /app/auth-token.secret
